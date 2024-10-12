@@ -1,5 +1,6 @@
 from typing import List
 
+
 def search_syllabus(user_query: str) -> List[dict]:
     return [
         {

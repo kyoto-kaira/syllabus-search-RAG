@@ -1,0 +1,7 @@
+streamlit
+streamlit-pills
+python-dotenv
+langchain
+langchain-google-genai
+ruff
+mypy

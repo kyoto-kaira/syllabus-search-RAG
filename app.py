@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_google_genai import ChatGoogleGenerativeAI
+from typing import Iterator
 
 from search import search_syllabus
 
@@ -77,7 +78,8 @@ diversity = pills(
     options=["多様性重視", "厳密性重視"],
 )
 
-def get_response(user_query: str) -> str:
+
+def get_response(user_query: str) -> Iterator[str]:
     prompt = ChatPromptTemplate.from_messages(
         [
             ("system", "与えられる文書をわかりやすく整形してください。"),
