@@ -10,7 +10,7 @@ on:
       - '*.py'
 
 jobs:
-  lintter:
+  linter:
     runs-on: ubuntu-latest
 
     steps:
@@ -34,7 +34,7 @@ jobs:
           run: uv pip install -r requirements.txt
 
         - name: Run Ruff
-          run: uv ruff check *.py
+          run: uv run ruff check *.py
 
         - name: Run Mypy
-          run: uv mypy *.py
+          run: uv run mypy *.py
