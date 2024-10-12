@@ -34,7 +34,7 @@ jobs:
           run: uv pip install -r requirements.txt
 
         - name: Run Ruff
-          run: ruff check *.py
+          run: uv ruff check *.py
 
         - name: Run Mypy
-          run: mypy *.py
+          run: uv mypy *.py
