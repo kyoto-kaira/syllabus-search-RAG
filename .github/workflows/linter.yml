@@ -1,0 +1,40 @@
+name: Linter
+on:
+  pull_request:
+    paths:
+      - '*.py'
+  push:
+    branches:
+      - main
+    paths:
+      - '*.py'
+
+jobs:
+  linter:
+    runs-on: ubuntu-latest
+
+    steps:
+        - name: Checkout code
+          uses: actions/checkout@v4
+    
+        - name: Set up Python
+          uses: actions/setup-python@v5
+          with:
+            python-version: 3.12
+
+        - name: Install uv
+          uses: astral-sh/setup-uv@v3
+
+        - name: Set up uv
+          run: |
+            uv venv .venv --python /opt/hostedtoolcache/Python/3.12.7/x64
+            source .venv/bin/activate
+
+        - name: Install dependencies
+          run: uv pip install -r requirements.txt
+
+        - name: Run Ruff
+          run: uv run ruff check *.py
+
+        - name: Run Mypy
+          run: uv run mypy *.py
