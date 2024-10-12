@@ -10,7 +10,7 @@ on:
       - '*.py'
 
 jobs:
-  pysen-lint:
+  lintter:
     runs-on: ubuntu-latest
 
     steps:
@@ -27,7 +27,7 @@ jobs:
 
         - name: Set up uv
           run: |
-            uv venv .venv --python /usr/bin/python3.12
+            uv venv .venv --python /opt/hostedtoolcache/Python/3.12.7/x64
             source .venv/bin/activate
 
         - name: Install dependencies
