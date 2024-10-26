@@ -34,7 +34,7 @@ professors = [metadata['所属部局、職名、氏名'] for metadata in metadat
 
 embedding = HuggingFaceEmbeddings(model_name="intfloat/multilingual-e5-base")
 store = FAISS.load_local('data2\shirabasu_vectorstore', embedding,allow_dangerous_deserialization=True)
-os.environ['GOOGLE_API_KEY'] = 'AIzaSyAN81BB6NhBA6PJRI4hepQB5-juJcIwoag'
+os.environ['GOOGLE_API_KEY'] = '------------------------'
 
 
 st.title('RAGシステム')
