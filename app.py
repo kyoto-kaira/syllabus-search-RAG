@@ -1,11 +1,11 @@
 import streamlit as st
 import pickle
 import os
-from langchain.prompts import PromptTemplate
 from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.vectorstores import FAISS
 from langchain_google_genai import ChatGoogleGenerativeAI
 
+from shirabasusearch import search,or_search,or_list_search,word_search,hyoka_search,ids_union 
 path1 = 'data2\shirabasu_classtype.pkl'
 with open(path1, 'rb') as f:
     classtypes = pickle.load(f)
@@ -32,75 +32,9 @@ with open(path8, 'rb') as f:
     yojigen = pickle.load(f)
 professors = [metadata['所属部局、職名、氏名'] for metadata in metadatas]
 
-def search(input,key):
-  a = set()
-  for i,metadata in enumerate(metadatas):
-    if key in metadata.keys():
-      if not metadata[key] == input:
-        a.add(str(i))
-    else:
-      a.add(str(i))
-  return a
-
-def or_search(input,key):
-  a = set()
-  for i,metadata in enumerate(metadatas):
-    if key in metadata.keys():
-      if not metadata[key] in input:
-        a.add(str(i))
-    else:
-      a.add(str(i))
-  return a
-
-def or_list_search(input,data):
-  a = set()
-  for i,y in enumerate(data):
-    b = 0
-    for d in y:
-      if  d in  input:
-        b = 1
-    if b == 0:
-      a.add(str(i))
-  return a
-
-def word_search(input,texts):
-  a = set()
-  tokens = input.split()
-  for i,text in enumerate(texts):
-    for token in tokens:
-      if not token in text:
-        a.add(str(i))
-  return a
-
-def hyoka_search(input,ratio):
-  seiseki = []
-  for d in hyoka:
-    a = set()
-    for k,v in d.items():
-      if isinstance(v, dict):
-        for assessment_type, score in v.items():
-          if score >= ratio:
-            a.add(assessment_type)
-      elif v >= ratio:
-        a.add(k)
-    if len(a) == 0:
-      a.add('なし')
-    seiseki.append(a)
-  return or_list_search(input,seiseki)
-
-def ids_union(ids):
-  if len(ids) == 1:
-    return list(ids[0])
-  else:
-    for i in range(len(ids)-1):
-      if i == 0:
-        a = ids[0] | ids[1]
-      else:
-        a = a | ids[i+1]
-    return list(a)
-
 embedding = HuggingFaceEmbeddings(model_name="intfloat/multilingual-e5-base")
 store = FAISS.load_local('data2\shirabasu_vectorstore', embedding,allow_dangerous_deserialization=True)
+os.environ['GOOGLE_API_KEY'] = 'AIzaSyAN81BB6NhBA6PJRI4hepQB5-juJcIwoag'
 
 
 st.title('RAGシステム')
@@ -353,7 +287,7 @@ with st.form('rag'):
         fr5 = st.checkbox('金5')
     yj =[]
     yj1 = [mo1,mo2,mo3,mo4,mo5,tu1,tu2,tu3,tu4,tu5,we1,we2,we3,we4,we5,th1,th2,th3,th4,th5,fr1,fr2,fr3,fr4,fr5,syu]
-    yj2 = ['月1','月2','月3','月4','月5','火1''火2''火3''火4''火5','水1','水2','水3','水4','水5','木1','木2','木3','木4','木5','金1','金2','金3','金4','金5','集中']
+    yj2 = ['月1','月2','月3','月4','月5','火1','火2','火3','火4','火5','水1','水2','水3','水4','水5','木1','木2','木3','木4','木5','金1','金2','金3','金4','金5','集中']
     for i in range(26):
         if yj1[i]:
             yj.append(yj2[i])
@@ -384,45 +318,66 @@ with st.form('rag'):
         ['平常点','課題','発表','討論','小レポート','小テスト','期末レポート','期末試験']
         )
 
-    gradepercent = st.number_input('成績評価の占める最低パーセント')
+    graderatio = st.text_input('成績評価の占める最低パーセント','0')
     
-    query = st.text_input('質問')
+    query = st.text_input('質問','大学で学べる科目は何ですか。')
+    
+    k = st.text_input('検索数','4')
     
     submit_btn = st.form_submit_button('検索')
     cancel_btn = st.form_submit_button('キャンセル')
 
 if submit_btn:
+    #入力を統合する
     ids = []
     if faculity != '---':
-        ids.append(search(faculity,'学部'))
+        ids.append(search(faculity,'学部',metadatas))
     if group != '---':
-        ids.append(search(group,'群'))
+        ids.append(search(group,'群',metadatas))
     if len(department) != 0:
         ids.append(or_list_search(department,departments))
     if len(field) != 0:
-        ids.append(or_search(field,'分野'))
+        ids.append(or_search(field,'分野',metadatas))
     if len(yj) != 0:
         ids.append(or_list_search(yj,yojigen))
     if len(classtype) != 0:
         ids.append(or_list_search(classtype,classtypes))
     if len(language) != 0:
-        ids.append(or_search(language,'使用言語'))
+        ids.append(or_search(language,'使用言語',metadatas))
     if len(period) != 0:
-        ids.append(or_search(period,'開講年度・開講期'))
+        ids.append(or_search(period,'開講年度・開講期',metadatas))
     if len(target) != 0:
-        ids.append(or_search(target,'対象学生'))
+        ids.append(or_search(target,'対象学生',metadatas))
     if len(esubject) != 0:
-        ids.append(or_search(esubject,'E科目'))
+        ids.append(or_search(esubject,'E科目',metadatas))
     if len(keyword) != 0:
         ids.append(word_search(keyword,keywordtexts))
     if len(professor) != 0:
         ids.append(word_search(professor,professors))
     if len(grade) != 0:
-        ids.append(hyoka_search(grade,gradepercent))
+        ids.append(hyoka_search(grade,int(graderatio),hyoka))
     if len(ids) != 0:
         store.delete(ids_union(ids))
     
-    a = store.similarity_search(query,k=6)
-    st.text('該当する科目は以下の通りです。')
-    for i in range(len(a)):
-        st.text(a[i].metadata['科目名']+'   URL:'+a[i].metadata['URL'])
+    #質問で検索するための検索候補の個数を求める
+    ID = [str(i) for i in range(len(texts))]
+    for i in ids_union(ids):
+        ID.remove(i)
+    st.text('検索候補は'+str(len(ID))+'個')
+
+    if len(ID) > 0:
+        #類似度が高い順に科目を検索する
+        a = store.similarity_search(query,k=int(k))
+        st.text('該当する科目は以下の通りです。')
+        #検索した科目を列挙する
+        for i in range(len(a)):
+            st.text(a[i].metadata['科目名']+'   URL:'+a[i].metadata['URL'])
+        #LLMで科目の要約を生成する
+        llm = ChatGoogleGenerativeAI(model='gemini-pro')
+        for i in range(len(a)):
+            st.text('---------------------------------------')
+            st.text(a[i].metadata['科目名']+'の概要')
+            sumtext = llm.invoke('以下の文章を日本語で箇条書きで要約を生成してください。'+fulltexts[int(a[i].metadata['ID'])])
+            st.text(sumtext.content)
+
+    
