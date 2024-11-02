@@ -1,13 +1,14 @@
 from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.vectorstores import FAISS
-import pickle
+import json
 
-path1 = 'data2\shirabasu_texts.pkl'
-with open(path1, 'rb') as f:
-    texts = pickle.load(f)
-path2 = 'data2/shirabasu_metadatas.pkl'
-with open(path2, mode='rb') as f:
-    metadatas = pickle.load(f)
+with open('data2/shirabasu_texts.txt') as f:
+    texts_txt = f.readlines()
+texts = [t.replace('\n','') for t in texts_txt]
+
+with open('data2/shirabasu_metadatas.json', 'rt') as f:
+    metadatas = json.load(f)
+
 ids = [str(i) for i in range(len(texts))]
 
 embedding = HuggingFaceEmbeddings(model_name="intfloat/multilingual-e5-base")

@@ -1,5 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
+import json
 
 #シラバス一覧ページから全学共通科目から総合人間学部（医学部医学科を除く）のそれぞれの科目のURLを取得
 url1 = 'https://www.k.kyoto-u.ac.jp/external/open_syllabus/all'
@@ -16,8 +17,6 @@ for i in range(3,len(soup.find_all('a'))):
         #URLが総合人間学部の最後の科目である英米文学入門になったら終了
 
 #各科目のURLからHTMLをリクエストする。3時間ほどかかる
-import requests
-from bs4 import BeautifulSoup
 htmls = []
 for url in urls:
     response = requests.get(url)
@@ -28,13 +27,11 @@ for url in urls:
 htmls1 = htmls[:3000]
 htmls2 = htmls[3000:]
 
-import pickle
-path_w1 = 'data1\shirabasu_htmls1.pkl'
-with open(path_w1, mode='wb') as f:
-    pickle.dump(htmls1, f)
-path_w2 = 'data1\shirabasu_htmls2.pkl'
-with open(path_w2, mode='wb') as f:
-    pickle.dump(htmls2, f)
-path_w3 = 'data1\shirabasu_url.pkl'
-with open(path_w3, mode='wb') as f:
-    pickle.dump(urls, f)
+with open('data1/shirabasu_htmls1.json', 'wt') as f:
+    json.dump(htmls1, f)
+
+with open('data1/shirabasu_htmls2.json', 'wt') as f:
+    json.dump(htmls2, f)
+
+with open('data1/shirabasu_urls.txt', mode='w') as f:
+    f.write('\n'.join(urls))

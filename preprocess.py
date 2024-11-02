@@ -1,13 +1,16 @@
-import pickle
-path1 = 'data1\shirabasu_htmls1.pkl'
-with open(path1, 'rb') as f:
-    htmls1 = pickle.load(f)
-path2 = 'data1\shirabasu_htmls2.pkl'
-with open(path2, 'rb') as f:
-    htmls2 = pickle.load(f)
-path3 = 'data1\shirabasu_url.pkl'
-with open(path3, 'rb') as f:
-    urls = pickle.load(f)
+from bs4 import BeautifulSoup
+import json
+
+with open('data1/shirabasu_htmls1.json', 'rt') as f:
+    htmls1 = json.load(f)
+
+with open('data1/shirabasu_htmls2.json', 'rt') as f:
+    htmls2 = json.load(f)
+
+with open('data1/shirabasu_urls.txt') as f:
+    urls_txt = f.readlines()
+urls = [t.replace('\n','') for t in urls_txt]
+
 htmls = htmls1 + htmls2
 
 rp = {'   ':'',
@@ -57,61 +60,17 @@ def yojigen(data):
         list: リストの中には'月1'から'金5'、'集中'などがある
     """
     if data == '月火水木3.4.5':
-        l = ['月1','月2','月3','火1','火2','火3','水1','水2','水3','木1','木2','木3']
+        l = ['月3','月4','月5','火3','火4','火5','水3','水4','水5','木3','木4','木5']
     else:
         l = []
-        if '月1' in data:
-            l.append('月1')
-        if '月2' in data:
-            l.append('月2')
-        if '月3' in data:
-            l.append('月3')
-        if '月4' in data:
-            l.append('月4')
-        if '月5' in data:
-            l.append('月5')
-        if '火1' in data:
-            l.append('火1')
-        if '火2' in data:
-            l.append('火2')
-        if '火3' in data:
-            l.append('火3')
-        if '火4' in data:
-            l.append('火4')
-        if '火5' in data:
-            l.append('火5')
-        if '水1' in data:
-            l.append('水1')
-        if '水2' in data:
-            l.append('水2')
-        if '水3' in data:
-            l.append('水3')
-        if '水4' in data:
-            l.append('水4')
-        if '水5' in data:
-            l.append('水5')
-        if '木1' in data:
-            l.append('木1')
-        if '木2' in data:
-            l.append('木2')
-        if '木3' in data:
-            l.append('木3')
-        if '木4' in data:
-            l.append('木4')
-        if '木5' in data:
-            l.append('木5')
-        if '金1' in data:
-            l.append('金1')
-        if '金2' in data:
-            l.append('金2')
-        if '金3' in data:
-            l.append('金3')
-        if '金4' in data:
-            l.append('金4')
-        if '金5' in data:
-            l.append('金5')
-        if '集中' in data:
-            l.append('集中')
+        W = ['月1','月2','月3','月4','月5',
+             '火1','火2','火3','火4','火5',
+             '水1','水2','水3','水4','水5',
+             '木1','木2','木3','木4','木5',
+             '金1','金2','金3','金4','金5','集中']
+        for w in W:
+            if w in data:
+                l.append(w)
     return l
 
 def faculty(i,d):
@@ -479,7 +438,6 @@ def class_type(d):
         d['授業形態'] = []
         return d
 
-from bs4 import BeautifulSoup
 texts = []
 #textsは科目名、授業の概要・目的、到達目標、授業計画と内容を含み、主に類似度検索に用いられる
 keywordtexts = []
@@ -496,12 +454,12 @@ classtype = []
 #classtypeは各科目の授業形態をリストで保存する
 for i,html in enumerate(htmls):
     d = {}
-    html = html.replace('０','0').replace('１','1').replace('２','2').replace('３','3').replace('４','4').replace('５','5').replace('６','6').replace('７','7').replace('８','8').replace('９','9')
+    zenkaku_to_hankaku = str.maketrans('０１２３４５６７８９', '0123456789')
+    html = html.translate(zenkaku_to_hankaku)
     soup = BeautifulSoup(html, 'html.parser')
     d = faculty(i,d)
     d['ID'] = str(i)
     d['URL'] = urls[i]
-    d['科目ナンバリング'] = soup.find_all('tr',valign="top")[0].find_all('td')[1].get_text().replace('  ','').replace('\n','').replace('\t','')
     d['所属部局、職名、氏名']= soup.find_all('tr',valign="top")[1].find_all('td', class_ ="lesson_plan_sell")[1].get_text().replace('\n','').replace('  ','').replace('\u3000','') .replace('\t','').replace('(所属部局)(職 名)(氏 名)','')
     d['科目名'] = soup.find_all('tr',valign="top")[1].find('b').get_text().replace('  ','').replace('\n','').replace('\t','')
     d = E_subject(d['科目名'],d)
@@ -531,36 +489,35 @@ for i,html in enumerate(htmls):
         fulltext = fulltext.replace(k, v)
     if '学科など' in d.keys():
         departments.append(d['学科など'])
-        d.pop('学科など')
-        metadatas.append(d)
     else:
-        departments.append('なし')
+        departments.append(['なし'])
         metadatas.append(d)
     texts.append(text)
     keywordtexts.append(keywordtext)
     fulltexts.append(fulltext)
     yoji.append(yojigen(d['曜時限']))
     classtype.append(d['授業形態'])
-    
 
-path_w1 = 'data2/shirabasu_texts.pkl'
-with open(path_w1, mode='wb') as f:
-    pickle.dump(texts, f)
-path_w2 = 'data2/shirabasu_metadatas.pkl'
-with open(path_w2, mode='wb') as f:
-    pickle.dump(metadatas, f)
-path_w3 = 'data2/shirabasu_fulltexts.pkl'
-with open(path_w3, mode='wb') as f:
-    pickle.dump(fulltexts, f)
-path_w4 = 'data2/shirabasu_yojigen.pkl'
-with open(path_w4, mode='wb') as f:
-    pickle.dump(yoji, f)
-path_w5 = 'data2/shirabasu_keywordtexts.pkl'
-with open(path_w5, mode='wb') as f:
-    pickle.dump(keywordtexts, f)
-path_w6 = 'data2/shirabasu_departments.pkl'
-with open(path_w6, mode='wb') as f:
-    pickle.dump(departments, f)
-path_w7 = 'data2/shirabasu_classtype.pkl'
-with open(path_w7, mode='wb') as f:
-    pickle.dump(classtype, f)
+with open('data2/shirabasu_classtype.txt', mode='w') as f:
+    for t in classtype:
+        f.writelines(','.join(t)+'\n')
+
+with open('data2/shirabasu_departments.txt', mode='w') as f:
+    for t in departments:
+        f.writelines(','.join(t)+'\n')
+
+with open('data2/shirabasu_fulltexts.txt', mode='w') as f:
+    f.write('\n'.join(fulltexts))
+
+with open('data2/shirabasu_keywordtexts.txt', mode='w') as f:
+    f.write('\n'.join(keywordtexts))
+
+with open('data2/shirabasu_metadatas', 'wt') as f:
+    json.dump(metadatas, f)
+
+with open('data2/shirabasu_texts.txt', mode='w') as f:
+    f.write('\n'.join(texts))
+
+with open('data2/shirabasu_yojigen.txt', mode='w') as f:
+    for t in yoji:
+        f.writelines(','.join(t)+'\n')
