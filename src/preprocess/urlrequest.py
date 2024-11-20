@@ -27,11 +27,11 @@ for url in urls:
 htmls1 = htmls[:3000]
 htmls2 = htmls[3000:]
 
-with open('data1/shirabasu_htmls1.json', 'wt') as f:
+with open('data1/syllabus_htmls1.json', 'wt') as f:
     json.dump(htmls1, f)
 
-with open('data1/shirabasu_htmls2.json', 'wt') as f:
+with open('data1/syllabus_htmls2.json', 'wt') as f:
     json.dump(htmls2, f)
 
-with open('data1/shirabasu_urls.txt', mode='w') as f:
+with open('data1/syllabus_urls.txt', mode='w') as f:
     f.write('\n'.join(urls))

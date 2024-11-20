@@ -1,13 +1,13 @@
 from bs4 import BeautifulSoup
 import json
 
-with open('data1/shirabasu_htmls1.json', 'rt') as f:
+with open('db/data1/syllabus_htmls1.json', 'rt', encoding="utf-8_sig") as f:
     htmls1 = json.load(f)
 
-with open('data1/shirabasu_htmls2.json', 'rt') as f:
+with open('db/data1/syllabus_htmls2.json', 'rt', encoding="utf-8_sig") as f:
     htmls2 = json.load(f)
 
-with open('data1/shirabasu_urls.txt') as f:
+with open('db/data1/syllabus_urls.txt', encoding="utf-8_sig") as f:
     urls_txt = f.readlines()
 urls = [t.replace('\n','') for t in urls_txt]
 
@@ -31,7 +31,7 @@ rp = {'   ':'',
       '(配当学年)':'。配当学年は',
       '(対象学生)':'。対象学生は',
       '(曜時限)':'。曜時限は',
-      '(授業の概要・目的)':'。授業の概要・目的は',
+      '(授業の概要・目的)':'授業の概要・目的は',
       '(到達目標)':'。到達目標は',
       '(履修要件)':'。履修要件は',
       '(成績評価の方法・観点)':'。成績評価の方法・観点は',
@@ -460,7 +460,7 @@ for i,html in enumerate(htmls):
     d = faculty(i,d)
     d['ID'] = str(i)
     d['URL'] = urls[i]
-    d['所属部局、職名、氏名']= soup.find_all('tr',valign="top")[1].find_all('td', class_ ="lesson_plan_sell")[1].get_text().replace('\n','').replace('  ','').replace('\u3000','') .replace('\t','').replace('(所属部局)(職 名)(氏 名)','')
+    d['担当教員']= ' '.join([i.get_text().replace('\n','').replace(' ','').replace('\u3000','') .replace('\t','') for i in soup.find_all('tr',valign="top")[1].find_all('td', class_ ="lesson_plan_sell")[1].find_all('td')]).replace('(所属部局) (職名) (氏名) ','')
     d['科目名'] = soup.find_all('tr',valign="top")[1].find('b').get_text().replace('  ','').replace('\n','').replace('\t','')
     d = E_subject(d['科目名'],d)
     for i in range(2, len(soup.find_all('tr',valign="top"))):
@@ -473,7 +473,7 @@ for i,html in enumerate(htmls):
         d['使用言語'] = 'その他'
     d = class_type(d)
     text = [div.get_text() for div in soup.find_all('div', class_ ="h120")]
-    text.insert(0,'科目名は'+soup.find_all('tr',valign="top")[1].find('b').get_text())
+    text.insert(0,'科目名は'+soup.find_all('tr',valign="top")[1].find('b').get_text()+'。')
     text = ''.join(text).split('(履修要件)')[0]+'。'
     keyword = [div.get_text() for div in soup.find_all('div', class_ ="h120")]
     keyword.insert(0,soup.find_all('tr',valign="top")[1].find('b').get_text())
@@ -482,7 +482,7 @@ for i,html in enumerate(htmls):
     if '題目' in d.keys():
         keyword.insert(1,d['題目'])
     keywordtext = ''.join(keyword)
-    fulltext = soup.get_text()
+    fulltext = ''.join([div.get_text() for div in soup.find_all('div', class_ ="h120")])
     for k, v in rp.items():
         text = text.replace(k, v)
         keywordtext = keywordtext.replace(k, v)
@@ -498,26 +498,26 @@ for i,html in enumerate(htmls):
     yoji.append(yojigen(d['曜時限']))
     classtype.append(d['授業形態'])
 
-with open('data2/shirabasu_classtype.txt', mode='w') as f:
+with open('db/data2/syllabus_classtype.txt', mode='w', encoding="utf-8_sig") as f:
     for t in classtype:
         f.writelines(','.join(t)+'\n')
 
-with open('data2/shirabasu_departments.txt', mode='w') as f:
+with open('db/data2/syllabus_departments.txt', mode='w', encoding="utf-8_sig") as f:
     for t in departments:
         f.writelines(','.join(t)+'\n')
 
-with open('data2/shirabasu_fulltexts.txt', mode='w') as f:
+with open('db/data2/syllabus_fulltexts.txt', mode='w', encoding="utf-8_sig") as f:
     f.write('\n'.join(fulltexts))
 
-with open('data2/shirabasu_keywordtexts.txt', mode='w') as f:
+with open('db/data2/syllabus_keywordtexts.txt', mode='w', encoding="utf-8_sig") as f:
     f.write('\n'.join(keywordtexts))
 
-with open('data2/shirabasu_metadatas', 'wt') as f:
+with open('db/data2/syllabus_metadatas', 'wt', encoding="utf-8_sig") as f:
     json.dump(metadatas, f)
 
-with open('data2/shirabasu_texts.txt', mode='w') as f:
+with open('db/data2/syllabus_texts.txt', mode='w', encoding="utf-8_sig") as f:
     f.write('\n'.join(texts))
 
-with open('data2/shirabasu_yojigen.txt', mode='w') as f:
+with open('db/data2/syllabus_yojigen.txt', mode='w', encoding="utf-8_sig") as f:
     for t in yoji:
         f.writelines(','.join(t)+'\n')

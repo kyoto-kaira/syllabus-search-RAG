@@ -4,49 +4,48 @@ import os
 import google.generativeai as genai
 import streamlit as st
 from dotenv import load_dotenv
-from langchain.embeddings import HuggingFaceEmbeddings
-from langchain.vectorstores import FAISS
-from src.modules.shirabasusearch import hyoka_search, ids_union, or_list_search, or_search, search, word_search
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_community.vectorstores import FAISS
+from src.modules.search_syllabus import hyoka_search, ids_union, or_list_search, or_search, search, word_search
 
-with open("data2/shirabasu_classtype.txt", encoding="utf-8_sig") as f:
+with open("db/data2/syllabus_classtype.txt", encoding="utf-8_sig") as f:
     classtype_txt = f.readlines()
 classtypes = [t.replace("\n", "").split(",") for t in classtype_txt]
 
-with open("data2/shirabasu_departments.txt", encoding="utf-8_sig") as f:
+with open("db/data2/syllabus_departments.txt", encoding="utf-8_sig") as f:
     departments_txt = f.readlines()
 departments = [t.replace("\n", "").split(",") for t in departments_txt]
 
-with open("data2/shirabasu_fulltexts.txt", encoding="utf-8_sig") as f:
+with open("db/data2/syllabus_fulltexts.txt", encoding="utf-8_sig") as f:
     fulltexts_txt = f.readlines()
 fulltexts = [t.replace("\n", "") for t in fulltexts_txt]
 
-with open("data2/shirabasu_hyoka.json", "rt", encoding="utf-8_sig") as f:
+with open("db/data2/syllabus_hyoka.json", "rt", encoding="utf-8_sig") as f:
     hyoka = json.load(f)
 
-with open("data2/shirabasu_keywordtexts.txt", encoding="utf-8_sig") as f:
+with open("db/data2/syllabus_keywordtexts.txt", encoding="utf-8_sig") as f:
     keywordtexts_txt = f.readlines()
 keywordtexts = [t.replace("\n", "") for t in keywordtexts_txt]
 
-with open("data2/shirabasu_metadatas.json", "rt", encoding="utf-8_sig") as f:
+with open("db/data2/syllabus_metadatas.json", "rt", encoding="utf-8_sig") as f:
     metadatas = json.load(f)
 
-with open("data2/shirabasu_texts.txt", encoding="utf-8_sig") as f:
+with open("db/data2/syllabus_texts.txt", encoding="utf-8_sig") as f:
     texts_txt = f.readlines()
 texts = [t.replace("\n", "") for t in texts_txt]
 
-with open("data2/shirabasu_yojigen.txt", encoding="utf-8_sig") as f:
+with open("db/data2/syllabus_yojigen.txt", encoding="utf-8_sig") as f:
     yojigen_txt = f.readlines()
 yojigen = [t.replace("\n", "").split(",") for t in yojigen_txt]
 
 professors = [metadata["所属部局、職名、氏名"] for metadata in metadatas]
 
 embedding = HuggingFaceEmbeddings(model_name="intfloat/multilingual-e5-base")
-store = FAISS.load_local("data2/shirabasu_vectorstore", embedding, allow_dangerous_deserialization=True)
 
 load_dotenv(dotenv_path="g.env")
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 genai.configure(api_key=GOOGLE_API_KEY)
-
+llm = genai.GenerativeModel('gemini-pro')
 
 @st.fragment
 def app():
@@ -391,7 +390,7 @@ def app():
 
     graderatio = st.text_input("成績評価の占める最低パーセント", "0")
 
-    query = st.text_input("質問", "大学で学べる科目は何ですか。")
+    query = st.text_input("どんな講義をお探しですか？", "例: 機械学習について学べる科目は何ですか")
 
     k = st.text_input("検索数", "4")
 
@@ -400,6 +399,7 @@ def app():
 
     if submit_btn:
         # 入力を統合する
+        store = FAISS.load_local("db/data2/syllabus_vectorstore", embedding, allow_dangerous_deserialization=True)
         ids = []
         if faculity != "---":
             ids.append(search(faculity, "学部", metadatas))
@@ -429,11 +429,13 @@ def app():
             ids.append(hyoka_search(grade, int(graderatio), hyoka))
         if len(ids) != 0:
             store.delete(ids_union(ids))
+        
 
         # 質問で検索するための検索候補の個数を求める
         ID = [str(i) for i in range(len(texts))]
-        for i in ids_union(ids):
-            ID.remove(i)
+        if len(ids) != 0:
+            for i in ids_union(ids):
+                ID.remove(i)
         st.text("検索候補は" + str(len(ID)) + "個")
 
         if len(ID) > 0:
@@ -446,12 +448,23 @@ def app():
             # LLMで科目の要約を生成する
             llm = genai.GenerativeModel("gemini-pro")
             for i in range(len(a)):
-                st.text("---------------------------------------")
-                st.text(a[i].metadata["科目名"] + "の概要")
-                sumtext = llm.generate_content(
-                    "以下の文章を日本語で箇条書きで要約を生成してください。" + fulltexts[int(a[i].metadata["ID"])]
-                )
-                st.text(sumtext.text)
+                with st.expander(f"検索結果{i+1}"+a[i].metadata["科目名"], expanded=True):
+                    with st.spinner("シラバス要約生成中..."):
+                        result_str = ""
+                        result_str += "* 学部:  "+a[i].metadata["学部"]+"\n\n"
+                        if departments[int(a[i].metadata["ID"])] != ["なし"]:
+                            result_str += "* 学科等:  "+' '.join(departments[int(a[i].metadata["ID"])])+"\n\n"
+                        if yojigen[int(a[i].metadata["ID"])] != [""]:
+                            result_str += "* 曜時限:  "+' '.join(yojigen[int(a[i].metadata["ID"])])+"\n\n"
+                        result_str += "* 授業形態:  "+' '.join(classtypes[int(a[i].metadata["ID"])])+"\n\n"
 
-
+                        for k, v in a[i].metadata.items():
+                            if not k in ["科目名","学部","ID","URL"]:
+                                result_str += f"* {k}:  {v}\n\n" 
+                        
+                        sumtext = llm.generate_content(
+                            "以下の文章を日本語で箇条書きで要約を生成してください。" + fulltexts[int(a[i].metadata["ID"])]
+                        )
+                        result_str += sumtext.text
+                        st.text(result_str)
 app()

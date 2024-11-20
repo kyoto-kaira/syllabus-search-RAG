@@ -4,10 +4,10 @@ from google.colab import userdata
 import json
 import time
 
-with open('data1/shirabasu_htmls1.json', 'rt') as f:
+with open('db/data1/syllabus_htmls1.json', 'rt') as f:
     htmls1 = json.load(f)
 
-with open('data1/shirabasu_htmls2.json', 'rt') as f:
+with open('db/data1/syllabus_htmls2.json', 'rt') as f:
     htmls2 = json.load(f)
 
 htmls = htmls1 + htmls2
@@ -52,5 +52,5 @@ for i,text in enumerate(seisekitexts):
 
 #実際は、一日にLLMにリクエストできる上限が1500回程度なので、Googlecolabで分割して実行した
 
-with open('data2/shirabasu_hyoka.json', 'wt') as f:
+with open('db/data2/syllabus_hyoka.json', 'wt') as f:
     json.dump(hyoka, f)
