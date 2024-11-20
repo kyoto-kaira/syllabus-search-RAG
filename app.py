@@ -3,6 +3,7 @@ import os
 
 import google.generativeai as genai
 import streamlit as st
+from streamlit_pills import pills
 from dotenv import load_dotenv
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
@@ -38,7 +39,7 @@ with open("db/data2/syllabus_yojigen.txt", encoding="utf-8_sig") as f:
     yojigen_txt = f.readlines()
 yojigen = [t.replace("\n", "").split(",") for t in yojigen_txt]
 
-professors = [metadata["所属部局、職名、氏名"] for metadata in metadatas]
+professors = [metadata["担当教員"] for metadata in metadatas]
 
 embedding = HuggingFaceEmbeddings(model_name="intfloat/multilingual-e5-base")
 
@@ -49,7 +50,7 @@ llm = genai.GenerativeModel('gemini-pro')
 
 @st.fragment
 def app():
-    st.title("RAGシステム")
+    st.title("京大シラバスRAGシステム")
 
     faculity = st.selectbox(
         "学部",
@@ -393,6 +394,11 @@ def app():
     query = st.text_input("どんな講義をお探しですか？", "例: 機械学習について学べる科目は何ですか")
 
     k = st.text_input("検索数", "4")
+    
+    diversity = pills(
+    label="モード",
+    options=["類似度検索", "MMR"],
+)
 
     submit_btn = st.button("検索")
     cancel_btn = st.button("キャンセル")
@@ -440,17 +446,20 @@ def app():
 
         if len(ID) > 0:
             # 類似度が高い順に科目を検索する
-            a = store.similarity_search(query, k=int(k))
-            st.text("該当する科目は以下の通りです。")
+            if diversity == "多様性重視":
+                a = store.similarity_search(query, k=int(k))
+            else:
+                a = store.max_marginal_relevance_search(query, k=int(k))
+            st.write("該当する科目は以下の通りです。")
             # 検索した科目を列挙する
             for i in range(len(a)):
-                st.text(a[i].metadata["科目名"] + "   URL:" + a[i].metadata["URL"])
+                st.link_button(label=a[i].metadata["科目名"], url= a[i].metadata["URL"])
             # LLMで科目の要約を生成する
             llm = genai.GenerativeModel("gemini-pro")
             for i in range(len(a)):
                 with st.expander(f"検索結果{i+1}"+a[i].metadata["科目名"], expanded=True):
                     with st.spinner("シラバス要約生成中..."):
-                        result_str = ""
+                        result_str = "**科目名:  "+a[i].metadata["科目名"]+"**\n\n"
                         result_str += "* 学部:  "+a[i].metadata["学部"]+"\n\n"
                         if departments[int(a[i].metadata["ID"])] != ["なし"]:
                             result_str += "* 学科等:  "+' '.join(departments[int(a[i].metadata["ID"])])+"\n\n"
@@ -459,12 +468,12 @@ def app():
                         result_str += "* 授業形態:  "+' '.join(classtypes[int(a[i].metadata["ID"])])+"\n\n"
 
                         for k, v in a[i].metadata.items():
-                            if not k in ["科目名","学部","ID","URL"]:
+                            if not k in ["科目名","学科など","英 訳","学部","ID","URL"]:
                                 result_str += f"* {k}:  {v}\n\n" 
                         
                         sumtext = llm.generate_content(
                             "以下の文章を日本語で箇条書きで要約を生成してください。" + fulltexts[int(a[i].metadata["ID"])]
                         )
                         result_str += sumtext.text
-                        st.text(result_str)
+                        st.markdown(result_str)
 app()

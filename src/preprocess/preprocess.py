@@ -424,19 +424,17 @@ def E_subject(text,d):
     return d
 
 def class_type(d):
+    types = [] 
     if '授業形態' in d.keys():        
         if d['授業形態'] == '特殊講義':
-            d['授業形態'] = ['特殊講義']
+            types.append('特殊講義')
         else:
-            l = []
             for text in ['講義','演習','実習','実験','語学','講読','卒業研究','ゼミナール']:
                 if text in d['授業形態']:
-                    l.append(text)
-            d['授業形態'] = l
-        return d
+                    types.append(text)
+        return types
     else:
-        d['授業形態'] = []
-        return d
+        return types
 
 texts = []
 #textsは科目名、授業の概要・目的、到達目標、授業計画と内容を含み、主に類似度検索に用いられる
@@ -471,7 +469,6 @@ for i,html in enumerate(htmls):
                 d[soup.find_all('tr',valign="top")[i].find_all('td')[2*j].get_text().replace('(','').replace(')','')] = soup.find_all('tr',valign="top")[i].find_all('td')[2*j+1].get_text().replace(' ','').replace('\n','').replace('\t','').replace('\u3000','')
     if not d['使用言語'] in ['日本語','英語','日本語及び英語']:
         d['使用言語'] = 'その他'
-    d = class_type(d)
     text = [div.get_text() for div in soup.find_all('div', class_ ="h120")]
     text.insert(0,'科目名は'+soup.find_all('tr',valign="top")[1].find('b').get_text()+'。')
     text = ''.join(text).split('(履修要件)')[0]+'。'
@@ -491,12 +488,16 @@ for i,html in enumerate(htmls):
         departments.append(d['学科など'])
     else:
         departments.append(['なし'])
-        metadatas.append(d)
+    metadata = {}
+    for key, value in d.items():
+        if key not in ['授業形態', '曜時限', '英 訳']:
+            metadata[key] = value
+    metadatas.append(metadata)
     texts.append(text)
     keywordtexts.append(keywordtext)
     fulltexts.append(fulltext)
     yoji.append(yojigen(d['曜時限']))
-    classtype.append(d['授業形態'])
+    classtype.append(class_type(d))
 
 with open('db/data2/syllabus_classtype.txt', mode='w', encoding="utf-8_sig") as f:
     for t in classtype:
@@ -512,7 +513,7 @@ with open('db/data2/syllabus_fulltexts.txt', mode='w', encoding="utf-8_sig") as 
 with open('db/data2/syllabus_keywordtexts.txt', mode='w', encoding="utf-8_sig") as f:
     f.write('\n'.join(keywordtexts))
 
-with open('db/data2/syllabus_metadatas', 'wt', encoding="utf-8_sig") as f:
+with open('db/data2/syllabus_metadatas.json', 'wt', encoding="utf-8_sig") as f:
     json.dump(metadatas, f)
 
 with open('db/data2/syllabus_texts.txt', mode='w', encoding="utf-8_sig") as f:
